@@ -16,10 +16,7 @@ def cat(t):
     """
     Concatenates an iterable of strings into a single string.
     """
-    s = ''
-    for a in t:
-        s += a
-    return s
+    return ''.join(t)
 
 
 def split_by_eights(s):
