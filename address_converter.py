@@ -11,6 +11,9 @@ Add conversion from dot-decimal to colon-hex
 Add exception handling for bad input strings
 """
 
+def split_and_fill(s, fill = 4, delim = ':'):
+    return (a.zfill(fill) for a in s.split(delim))
+
 
 def split_in_pairs(s, padding = "0"):
     """
@@ -48,9 +51,12 @@ def int_to_dd(t):
 
 if __name__ == "__main__":
     token = input("Hex token, e.g. dead:beef : ")
-    token_p = (a.zfill(4) for a in token.split(':'))
+    token_p = split_and_fill(token)
     token_s = "".join(token_p)
     #print(token_s)
     token_r = split_in_pairs(token_s)
     token_d = hex_to_int(token_r)
-    print(int_to_dd(token_d))
+    try:
+        print(int_to_dd(token_d))
+    except ValueError:
+        raise ValueError("Ooops") from ValueError
