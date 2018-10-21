@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 ip token list/get returns a token in dot-decimal form.
@@ -12,21 +12,21 @@ Add exception handling for bad input strings
 """
 
 
-def cat(t):
+def split_in_pairs(s, padding = "0"):
     """
-    Concatenates an iterable of strings into a single string.
-    """
-    return ''.join(t)
+    Takes a string and splits into an iterable of strings of two characters each.
 
+    Made to break up a hex string into octets, so default is to pad an odd length
+    string with a 0 in front. An alternative character may be specified as the
+    second argument.
+    """
+    if not isinstance(padding, str) or len(padding) != 1:
+        raise TypeError("Padding must be a single character.")
 
-def split_by_eights(s):
-    """
-    Takes a string of even length and splits into strings of two characters each.
-    Made to break up a hex string into octets.
-    """
-    r = iter(s)
-    return (a+b for a,b in zip(r,r))
-    
+    s = padding + s if len(s) % 2 else s
+    v = iter(s)
+    return (a+b for a,b in zip(v,v))
+
 
 def hex_to_int(t):
     """
@@ -49,7 +49,8 @@ def int_to_dd(t):
 if __name__ == "__main__":
     token = input("Hex token, e.g. dead:beef : ")
     token_p = (a.zfill(4) for a in token.split(':'))
-    token_s = cat(token_p)
-    token_r = split_by_eights(token_s)
+    token_s = "".join(token_p)
+    #print(token_s)
+    token_r = split_in_pairs(token_s)
     token_d = hex_to_int(token_r)
     print(int_to_dd(token_d))
