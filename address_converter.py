@@ -11,7 +11,16 @@ Add conversion from dot-decimal to colon-hex
 Add exception handling for bad input strings
 """
 
+#import argparse
+
+
 def split_and_fill(s, fill = 4, delim = ':'):
+    """
+    Takes a string, a fill amount, and a delimiter and outputs an iterable,
+    where each index is the substring up to or after `delim`, zero-filled to `fill`.
+
+        e.g. split_and_fill("de:ad:be:ef") returns "00de", "00ad", "00be", "00ef"
+    """
     return (a.zfill(fill) for a in s.split(delim))
 
 
