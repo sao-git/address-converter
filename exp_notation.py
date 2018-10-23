@@ -3,6 +3,8 @@ from math import log
 import re
 
 """
+TODO:
+    Add a lookup table of SI prefixes, and convert from base 10 to 1000 for engineering notation.
 """
 
 def sign(x):
@@ -41,14 +43,7 @@ def normalize(x):
     #
     # Most cases use temporary strings, as this is more a problem of
     # human readable representation rather than the underlying number.
-    # This choice makes the contents of the pair exact. Reversing the
-    # process and comparing to the original, e.g.
-    #
-    #    t = normalize(f)
-    #    x_2 = t[0] * 10**[1]
-    #    x_2 == x
-    #
-    # may fail due to rounding errors in evaluating x_2.
+    # This choice makes the contents of the pair exact.
 
 
     # Nothing further needed if the whole part of |x| is in [1, 10).
@@ -71,30 +66,33 @@ def normalize(x):
         # count the number of zeroes until the first non-zero, and shift the decimal point
         # to the right by that count plus one.
         else:
-            x_sign = sign(x)
             post_dec = str(x_abs)[2:]
             shift = re.search("0*", post_dec).end() + 1
-            return x_sign * float(post_dec[shift - 1] + "." + post_dec[shift:]), -1 * shift
+            return sign(x) * float(post_dec[shift - 1] + "." + post_dec[shift:]), -1 * shift
 
 
     # Final case is for x > 10. Count the length of the whole part of |x|,
     # subtract one, and shift the decimal point to the left.
+    # TODO:
+    #       Check for split_float and adjust accordingly.
+    #       Rewrite to use temp string construction for exactness.
     else:
+        print("Case: x > 10")
         try:
             shift = len(str(int(x_abs))) - 1
         # If x is ±inf return x, x
         except OverflowError:
             return x, x
+        #post_dec = str(x_abs).split('.')[1]
         return x / 10**(shift), shift
-        #x_str = str(x)
-        #return 
+        #return sign(x) * float(post_dec[shift - 1] + "." + post_dec[shift:]), -1 * shift
 
 
 def exp_tuple(x, base = 10, normalize = True):
     # We only need the integer part of the logarithm.
     # int() always truncates towards zero, so negative exponents are covered.
-    a = int(log(abs(x) / log(base)))
-    return x / base**a, base, a
+    n = int(log(abs(x) / log(base)))
+    return x / base**n, base, n
 
 def radix_base(t, base):
     """
