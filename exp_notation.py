@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from math import log
+import math
 import re
 
 """
@@ -8,7 +8,8 @@ TODO:
 """
 
 def sign(x):
-    """                                                                                                 Taken from https://www.quora.com/How-do-I-get-sign-of-integer-in-Python
+    """
+    Taken from https://www.quora.com/How-do-I-get-sign-of-integer-in-Python
     """
     return x and (1, -1)[x < 0]
 
@@ -62,6 +63,7 @@ def normalize(x):
         if x_split[1] != 0:
             return x_split
 
+
         # Last case here is to make a temp string after the decimal point,
         # count the number of zeroes until the first non-zero, and shift the decimal point
         # to the right by that count plus one.
@@ -88,11 +90,30 @@ def normalize(x):
         #return sign(x) * float(post_dec[shift - 1] + "." + post_dec[shift:]), -1 * shift
 
 
-def exp_tuple(x, base = 10, normalize = True):
-    # We only need the integer part of the logarithm.
+def exp_tuple(x, base = 10, normalize = False):
+    """
+    For a number x and base b, return (m, b, n) where m = x / b^n, n = int(log_b(|x|))
+
+    """
+    # (0, 0) will be the output for x = 0
+    if x == 0:
+        print("x == 0")
+        return 0, 0
+
+    # We only need the integral part of the logarithm.
     # int() always truncates towards zero, so negative exponents are covered.
-    n = int(log(abs(x) / log(base)))
-    return x / base**n, base, n
+    #
+    # Conditional added here to mitigate rounding errors from exponentiation
+    # observed during testing.
+    else:
+        n = int(math.log(abs(x), base))
+        if n >= 1:
+            print("n >= 1")
+            return x / pow(base, n), base, n
+        else:
+            print("n < 1")
+            return x * pow(base, -1 * n), base, n
+
 
 def radix_base(t, base):
     """
