@@ -97,21 +97,20 @@ def exp_tuple(x, base = 10, normalize = False):
     """
     # (0, 0) will be the output for x = 0
     if x == 0:
-        print("x == 0")
-        return 0, 0
+        return 0, base, 0
 
     # We only need the integral part of the logarithm.
     # int() always truncates towards zero, so negative exponents are covered.
-    #
-    # Conditional added here to mitigate rounding errors from exponentiation
-    # observed during testing.
     else:
         n = int(math.log(abs(x), base))
-        if n >= 1:
-            print("n >= 1")
+        if n == 0:
+            return x, base, 0
+        # Conditional added here to mitigate rounding errors from exponentiation
+        # observed during testing.
+        elif n >= 1:
             return x / pow(base, n), base, n
         else:
-            print("n < 1")
+            # Case n < 1
             return x * pow(base, -1 * n), base, n
 
 
@@ -121,12 +120,18 @@ def radix_base(t, base):
     """
     return
 
-if __name__ == "__main__":
+if __name__ == "__main_":
     a = float(input("Number pls: "))
     print(normalize(a))
 
-if __name__ == "__mai__":
+if __name__ == "__main__":
     x = float(input("Number pls: "))
-    b = int(input("Base pls: "))
+    b_str = input("Base pls: ")
+    if b_str == "e":
+        b = math.e
+    elif b_str == "pi":
+        b = math.pi
+    else:
+        b = int(b_str)
     t = exp_tuple(x, b)
     print(t)
