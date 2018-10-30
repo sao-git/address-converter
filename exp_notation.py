@@ -2,10 +2,56 @@
 import math
 import re
 
-"""
-TODO:
-    Add a lookup table of SI prefixes, and convert from base 10 to 1000 for engineering notation.
-"""
+
+# TODO:
+#       Add a lookup table of SI prefixes, and convert from base 10
+#       to 1000 for engineering notation.
+
+class si_prefix:
+    si_prefixes = {
+            # Powers of 10, or
+            # 1000^(1/3)
+            "0": ("", ""),
+            "1": ("deca", "da"),
+            "2": ("hecto", "h"),
+            "3": ("kilo", "k"),
+            "6": ("mega", "M"),
+            "9": ("giga", "G"),
+            "12": ("tera", "T"),
+            "15": ("peta", "P"),
+            "18": ("exa", "E"),
+            "21": ("zetta", "Z"),
+            "24": ("yotta", "Y"),
+            "-1": ("deci", "d"),
+            "-2": ("centi", "c"),
+            "-3": ("milli", "m"),
+            "-6": ("micro", "µ"),
+            "-9": ("nano", "n"),
+            "-12": ("pico", "p"),
+            "-15": ("femto", "f"),
+            "-18": ("atto", "a"),
+            "-21": ("zepto", "z"),
+            "-24": ("yocto", "y")
+            }
+
+    bi_prefixes = {
+            # Powers of 1024, or
+            # 2^10
+            # 8^(10/3)
+            # 16^(5/2)
+            "1": ("kibi", "Ki"),
+            "2": ("mebi", "Mi"),
+            "3": ("gibi", "Gi"),
+            "4": ("tebi", "Ti"),
+            "5": ("pebi", "Pi"),
+            "6": ("exbi", "Ei"),
+            "7": ("zebi", "Zi"),
+            "8": ("yobi", "Yi")
+            }
+
+    def __init__(self):
+        return
+
 
 def sign(x):
     """
