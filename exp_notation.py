@@ -2,14 +2,14 @@
 import math
 import re
 
-
 # TODO:
 #       Add a lookup table of SI prefixes, and convert from base 10
 #       to 1000 for engineering notation.
 
-class si_prefix:
+
+class exponential:
     si_prefixes = {
-            # Powers of 10, or
+            # SI powers of 10, or
             # 1000^(1/3)
             "0": ("", ""),
             "1": ("deca", "da"),
@@ -35,10 +35,11 @@ class si_prefix:
             }
 
     bi_prefixes = {
-            # Powers of 1024, or
+            # IEC powers of 1024, or
             # 2^10
             # 8^(10/3)
             # 16^(5/2)
+            "0": ("", ""),
             "1": ("kibi", "Ki"),
             "2": ("mebi", "Mi"),
             "3": ("gibi", "Gi"),
@@ -141,10 +142,9 @@ def normalize(x, base = 10):
 def exp_tuple(x, base = 10, normalize = False, display_base = 10):
     """
     For a number x and base b, return (m, n, b) where m = x / b^n, n = int(log_b(|x|))
-    If normalize is True, the output will be tuned to ensure 1 <= |m| display_base
+    If normalize is True, the output will be tuned to ensure 1 <= |m| < display_base
 
     """
-
     # (0, 0, base) will be the output for x = 0
     if x == 0:
         return 0, 0, base
@@ -152,25 +152,28 @@ def exp_tuple(x, base = 10, normalize = False, display_base = 10):
         x_log = math.log(abs(x), base)
         # int() always truncates towards zero, so negative exponents are covered.
         n = int(x_log)
+        t = x_log - n
 
     # Conditional added here to mitigate rounding errors from exponentiation
     # observed during testing.
-    m_calc = lambda x,n: x / pow(base, n) if n >= 1 else x * pow(base, -1 * n) 
+    m_calc = lambda x,n: x / pow(base, n) if n >= 1 else x * pow(base, -1 * n)
+    #m_calc = lambda t: sign(x) * base**t
 
-    if normalize == False:
-        if n == 0:
-            return x, 0, base
-        else:
-            return m_calc(x,n), n, base
+
+    if normalize:
+        if t < 0:
+            n -= 1
+            t += 1
+            #print("t < 0, n_p = {}, t_p = {}".format(n, t))
+
+        m = m_calc(x, n)
+    elif n == 0:
+        m = x
     else:
         t = x_log - n
-        log_b_B = math.log(display_base, base)
+        m = m_calc(x, n)
 
-    if 0 <= t < log_b_B:
-        return m_calc(x,n), n, base
-    else:
-        n = math.ceil(x_log - log_b_B)
-        return m_calc(x,n), n, base
+    return m, n, base
 
 
 def radix_base(t):
@@ -198,23 +201,30 @@ if __name__ == "__main_":
 if __name__ == "__main__":
     x = float(input("Number pls: "))
     b_str = input("Base pls: ")
-    d = int(input("Display base pls: "))
+    #d = int(input("Display base pls: "))
     if b_str == "e":
         b = math.e
     elif b_str == "pi":
         b = math.pi
     else:
         b = int(b_str)
-    print("\nUsing input: x = {}, b = {}, B = {}".format(x, b, d))
-    t = exp_tuple(x, b, normalize = True, display_base = d)
-    print("\nexp_tuple(x, base = {}, normalize = True, display_base = {:d}):\n        {}".format(b, d, t))
+    print("\nUsing input: x = {}, b = {}".format(x, b))
+
+    t = exp_tuple(x, b, normalize = True)
+    print("\nexp_tuple(x, base = {}, normalize = True):\n        {}".format(b, t))
     x_normal = normalize(x)
     print("normalize(x): \n        " + str(x_normal))
     x_recons = t[0] * t[2]**t[1]
+
     print("\nReconstructed from exp_tuple: " + str(x_recons))
     x_recons_n = x_normal[0] * 10**x_normal[1]
     print("Reconstructed from normalize: " + str(x_recons_n))
     print("Equal?: " + str(x_recons == x_recons_n))
     x_comp = abs(x_recons - x_recons_n)
-    tolerance = 1e-20
+    tolerance = 1e-7
     print("Within {:.0e} of each other?: {}".format(tolerance, x_comp < tolerance))
+
+
+#    print("\n\n")
+#    print(si_prefix.si_prefixes)
+#    print(si_prefix.bi_prefixes)
