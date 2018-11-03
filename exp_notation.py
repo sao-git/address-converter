@@ -81,28 +81,26 @@ def normalize(x, base = 10):
     there is exactly one decimal digit before the decimal point. This is the
     expected default of scientific notation output.
 
-    Returns a pair (x_n, shift) where x_n is the normalized number
+    Returns a pair (x_n, shift, base) where x_n is the normalized number
     and shift is the base 10 exponent to return to the original x.
 
-    If x is ±inf it will return (x, x) rather than throw an exception.
+    If x is ±inf it will return (x, x, base) rather than throw an exception.
     """
 
     # Implementation detail:
     #
     # This is the algorithm for perfect normalization which relies on
-    # string conversion to eliminate rounding error, but is very slightly
+    # string conversion to eliminate rounding error, but is very, very slightly
     # slower than using normalize = True with exp_tuple() (~5.5 µs on a
-    # Pentium N3700 @ 1.60GHz) and currently only works for base
-    # and display_base of 10.
+    # Pentium N3700 @ 1.60GHz) and currently only works for base 10.
 
+    x_abs = abs(x)
 
     # Nothing further needed if the whole part of |x| is in [1, 10).
     # Zero added to this case because it returned an exponent of -2
     # when caught by the |x| < 1 case.
-    x_abs = abs(x)
     if 1 <= x_abs < 10 or x == 0:
         return x, 0, base
-
     elif x_abs < 1:
         # Dealing exclusively with floats in this case.
 
@@ -131,8 +129,8 @@ def normalize(x, base = 10):
         print("Case: x > 10")
         try:
             shift = len(str(int(x_abs))) - 1
-        # If x is ±inf return x, x
-        except OverflowError:
+        # If x is ±inf or NaN return x, x, base
+        except (OverflowError, ValueError):
             return x, x, base
         #post_dec = str(x_abs).split('.')[1]
         return x / 10**(shift), shift, base
@@ -142,14 +140,17 @@ def normalize(x, base = 10):
 def exp_tuple(x, base = 10, normalize = False):
     """
     For a number x and base b, return (m, n, b) where m = x / b^n, n = int(log_b(|x|)).
-    If normalize is True, the output will be tuned to ensure 1 <= |m| < base.
+    If normalize is True, the output will be tuned to ensure 1 <= |m| < b.
+
+    (0, 0, base) will be the output for x = 0, since 0 * base^0 = 0 * 1 = 0.
+
+    If x is ±inf or NaN it will return (x, x, base) rather than raise an exception.
+    However, if b <= 1, a ValueError will be raised.
     """
 
     if base <= 1:
-        # base is restricted to be greater than and not equal to 1.
         raise ValueError("Base must be greater than 1.")
     elif x == 0:
-        # (0, 0, base) will be the output for x = 0, since 0 * base^0 = 0 * 1 = 0.
         return 0, 0, base
     else:
         # log_b |x| is equal to n + t, where n is the integer part and t the fractional part.
@@ -159,6 +160,11 @@ def exp_tuple(x, base = 10, normalize = False):
         # This form is called "normalized" if 1 <= |m| < b, which means 0 <= t < 1, and
         # occurs naturally for |x| >= 1. When 0 < |x| < b, 1 must be subtracted from the
         # exponent n to make m fit this condition.
+        try:
+            int(x)
+        # If x is ±inf or NaN return x, x, base
+        except (OverflowError, ValueError):
+            return x, x, base
 
         x_log = math.log(abs(x), base)
         # int() always truncates towards zero, so negative exponents are covered.
@@ -201,6 +207,9 @@ def radix_base(t):
     m_f_r = re.search(r, m_f)
 
     return
+
+#if __name__ == "__main__":
+#    print(exp_tuple(float("-inf"), 10))
 
 if __name__ == "__main_":
     a = float(input("Number pls: "))
