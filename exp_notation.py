@@ -139,16 +139,27 @@ def normalize(x, base = 10):
         #return sign(x) * float(post_dec[shift - 1] + "." + post_dec[shift:]), -1 * shift
 
 
-def exp_tuple(x, base = 10, normalize = False, display_base = 10):
+def exp_tuple(x, base = 10, normalize = False):
     """
-    For a number x and base b, return (m, n, b) where m = x / b^n, n = int(log_b(|x|))
-    If normalize is True, the output will be tuned to ensure 1 <= |m| < display_base
+    For a number x and base b, return (m, n, b) where m = x / b^n, n = int(log_b(|x|)).
+    If normalize is True, the output will be tuned to ensure 1 <= |m| < base.
+    """
 
-    """
-    # (0, 0, base) will be the output for x = 0
-    if x == 0:
+    if base <= 1:
+        # base is restricted to be greater than and not equal to 1.
+        raise ValueError("Base must be greater than 1.")
+    elif x == 0:
+        # (0, 0, base) will be the output for x = 0, since 0 * base^0 = 0 * 1 = 0.
         return 0, 0, base
     else:
+        # log_b |x| is equal to n + t, where n is the integer part and t the fractional part.
+        # |x| is then equal to b^(n+t) which is also b^t*b^n, known as the exponentional
+        # form of |x|. Let b^t be called |m|, which is also |x|/b^n. Then x = x/b^n * b^n.
+        #
+        # This form is called "normalized" if 1 <= |m| < b, which means 0 <= t < 1, and
+        # occurs naturally for |x| >= 1. When 0 < |x| < b, 1 must be subtracted from the
+        # exponent n to make m fit this condition.
+
         x_log = math.log(abs(x), base)
         # int() always truncates towards zero, so negative exponents are covered.
         n = int(x_log)
@@ -157,20 +168,17 @@ def exp_tuple(x, base = 10, normalize = False, display_base = 10):
     # Conditional added here to mitigate rounding errors from exponentiation
     # observed during testing.
     m_calc = lambda x,n: x / pow(base, n) if n >= 1 else x * pow(base, -1 * n)
-    #m_calc = lambda t: sign(x) * base**t
 
+    if normalize and t < 0:
+        # If 0 <= t < 1, do nothing. If t >= 0, it will be < 1 by definition.
+        # If t < 0, subtract 1 from n, which implicitly adds 1 to t and guarantees
+        # it to be between 0 and 1. Subtracting 1 from n multiples m by b.
+        n -= 1
 
-    if normalize:
-        if t < 0:
-            n -= 1
-            t += 1
-            #print("t < 0, n_p = {}, t_p = {}".format(n, t))
-
-        m = m_calc(x, n)
-    elif n == 0:
+    if n == 0:
+        # If 0 < |x| < base, n is zero, so m is just x.
         m = x
     else:
-        t = x_log - n
         m = m_calc(x, n)
 
     return m, n, base
@@ -178,14 +186,14 @@ def exp_tuple(x, base = 10, normalize = False, display_base = 10):
 
 def radix_base(t):
     """
-    Make a new exp_tuple with m as a string of `base` representation, e.g.
-    if the base is 16, convert m to a hex string. This only works for conversions provided
-    by Python.
+    Make a new exp_tuple with each element as a string of base representation, e.g.
+    if the base is 16, convert m to a hex string. This is limited in scope to the "common"
+    bases, i.e. 2, 8, 10, 16, and 64.
     """
     m, n, b = t
 
     #float.hex(), float.fromhex()
-    
+
     m_i = int(m)
     m_f = str(abs(m))[2:]
     r = r"(0[xbo])"
