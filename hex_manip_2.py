@@ -11,14 +11,14 @@ if d not in exp_notation.valid_radices:
 f_hex = f.hex()
 print(f_hex)
 # Capture a negative sign if present
-sign_f = f_hex[0] if f_hex[0] != '0' else ''
+sign_f = '-' if f_hex[0] != '0' else ''
 # Determine how many places to skip the sign character and '0x'
 skip = 3 if f < 0 else 2
-# Mantissa is the absolute value, p is to base 2
+# `mantissa` is the absolute value, `p` is to base 2
 mantissa, p = f_hex[skip:].split('p')
 p = int(p)
-# Whole part is 1 for normal floats, 0 for subnormal
-# Fraction part is in hex; each digit will be converted to int if display_base != 16
+# `whole` is 1 for normal floats, 0 for subnormal or zero
+# `fraction` is in hex; each digit will be converted to int if display_base != 16
 whole, fraction = mantissa.split('.')
 print("sign + mantissa = {}{}.{}\n".format(sign_f, whole, fraction))
 
