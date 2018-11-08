@@ -12,10 +12,21 @@ valid_radices = (2, 8, 16)
 int_convs = (bin, oct, hex)
 
 # Lookup table maps display_base as a key to conversion function as a value
-int_conv_funcs = dict(zip(valid_radices, int_convs))
+radix_conv_funcs = dict(zip(valid_radices, int_convs))
 # Lookup table maps int as a key to int(log(int, 2)) as a value
 # Valid for powers of 2 from 0 to 1024
-radix_bit_conv = dict((2**n, n) for n in range(0, 11))
+radix_bits = dict((2**n, n) for n in range(0, 11))
+
+def _radix_conv(n, radix):
+    conv = radix_conv_funcs[radix]
+    if n == 0:
+        return '0'
+    else:
+        return '-' + conv(abs(n))[2:] if n < 0 else conv(n)[2:]
+
+
+def radix_conv(radix):
+    return lambda x: _radix_conv(x, radix)
 
 
 class RadixError(Exception):
@@ -214,46 +225,93 @@ def exp_tuple(x, base = 10, normalize = False):
     return m, n, base
 
 
-def hex_manip(f, display_base = 16):
+def hex_manip(f, display_base = 16, normalize = True):
+    """
+    Converts a float `f` to a tuple of strings `m, (n, d), display_base`, where:
+
+        `m` is the mantissa, normalized or not, in digits of `display_base`
+        `n` is the numerator of the exponent on `display_base` that converts `m` back to `f`
+        `d` is the denominator of the exponent, including 1
+        `display_base` is in `valid_radices`
+
+    If `normalize` == True and `display_base` != 2, there is a chance the exponent will not be an
+    integer. In this case, the denominator `d` is equal to the base 2 logarithm of `display_base`.
+    """
+
     if display_base not in valid_radices:
         raise RadixError
-    else:
-        f_t = float(f).hex()
 
-    # Capture the sign of f
-    sign_f = f_t[0] if f_t[0] != '0' else ''
+    # Get the hex literal for `f`, described at:
+    # https://docs.python.org/3/library/stdtypes.html#float.hex
+    # https://docs.oracle.com/javase/7/docs/api/java/lang/Double.html#toHexString(double)
+    f_hex = f.hex()
+    # Capture a negative sign if present
+    sign_f = '-' if f_hex[0] != '0' else ''
     # Determine how many places to skip the sign character and '0x'
     skip = 3 if f < 0 else 2
-    # Mantissa is the absolute value, exponent is to base 2
-    mantissa, exponent = f_t[skip:].split('p')
-    exponent = int(exponent)
-    # Whole part is 1 for normal floats, 0 for subnormal
-    # Fraction part is in hex; each digit will be converted to int if display_base != 16
+    # `mantissa` is the absolute value, `p` is to base 2
+    mantissa, p = f_hex[skip:].split('p')
+    p = int(p)
+    # `whole` is 1 for normal floats, 0 for subnormal or zero
+    # `fraction` is in hex; each digit will be converted to int if display_base != 16
     whole, fraction = mantissa.split('.')
-    #whole = int(whole)
-    whole = bin(whole)[2:].zfill(4)
-    print("{}.{}".format(whole,fraction))
 
-    #f_frac = tuple(int(x) / 16**i for i,x in enumerate(iter(f_m), 1))
-    if display_base != 16:
-        # Determine builtin function for conversion
-        int_conv_func = int_conv_funcs[display_base]
-        # Named generator for readibility
-        f_frac = tuple(int(x, 16) for x in iter(fraction))
-        f_frac_d = sum(x / 16**i for i,x in enumerate(f_frac, 1))
-        print("f_frac_d = " + str(f_frac_d))
-        # Convert digits to new base
-        #fraction = "".join(int_conv_func(x)[2:] for x in f_frac)
-        #fraction = tuple(int_conv_func(x)[2:] for x in f_frac)
-        fraction = "".join(bin(x)[2:].zfill(4) for x in f_frac)
-        #frac_d = sum(int(x, display_base) / display_base**i for i,x in enumerate(fraction, 1))
-        frac_d = sum(int(x, 2) / 2**i for i,x in enumerate(fraction, 1))
-        print("frac_d = " + str(frac_d))
-        print("f_frac_d == frac_d?: " + str(f_frac_d == frac_d))
-        shift = math.log(display_base, 2)
-        #frac_shifted = sign_f + whole 
+    bits = radix_bit_conv[display_base]
+    n = int(p / bits)
+    s = abs(p) % bits
 
-    return fraction
+    # Determine builtin function for conversion
+    int_conv_func = lambda x: int_conv_funcs[display_base](x)[2:]
+
+    # Helper generator for readability
+    f_frac = (int(x, 16) for x in iter(fraction))
+    # Convert hex digits in the fraction to a big endian binary string
+    fraction = "".join(bin(x)[2:].zfill(4) for x in f_frac)
+
+    if n < 0:
+        if normalize == True:
+            working_set = whole + fraction
+            whole_new, fraction_new = working_set[:s+1], working_set[s+1:]
+            n = (p+bits-1)/bits
+            n_conv = '-' + int_conv_func(abs(int(n*bits - s+1))), str(bits)
+        else:
+            working_set = whole.zfill(s+1) + fraction
+            whole_new, fraction_new = working_set[0], working_set[1:]
+            n_conv = n, '1'
+    else:
+        working_set = whole + fraction
+        whole_new, fraction_new = working_set[:s+1], working_set[s+1:]
+        n_conv = n, '1'
+
+    print(fraction_new)
+
+    if int(fraction_new) == 0:
+        # A '0' in a 1-tuple is sufficient if there is no new fractional part
+        frac_groups = '0',
+    else:
+        # Pad `fraction` with trailing zeroes if the length of `fraction` is not divisible by `bits`
+        frac_length = len(fraction_new) % bits
+        if frac_length != 0:
+            fraction_new += ''.zfill(bits - frac_length)
+
+        # Helpers for frac_groups
+        #
+        # The expression inside `zip` creates a tuple of length `bits` where each element is a reference
+        # to `frac_iter`, with the star operator allowing `zip` to use `frac_iter` to create the groups
+        frac_iter = iter(fraction_new)
+        frac_group_zip = zip(*( (frac_iter,)*bits ))
+        # Get the groups of `fraction_new` of `bits` length as big endian binary strings
+        frac_groups = [''.join(t) for t in frac_group_zip]
+        # Strip trailing zero groups
+        while int(frac_groups[-1]) == 0:
+            frac_groups.pop()
+
+    # Final converstion for `fraction`, giving a string of characters in the display base
+    fraction_final = ''.join(int_conv_func(int(g,2)) for g in frac_groups)
+    # Finally, assemble the whole signed mantissa…
+    final = sign_f + int_conv_func(int(whole_new,2)) + '.' + fraction_final
+    # …and return the mantissa, exponent (with denominator), and display base
+    return final, n_conv, str(display_base)
 
 
 def radix_base(t, display_base = 16, raw_hex = False):
@@ -272,7 +330,7 @@ def radix_base(t, display_base = 16, raw_hex = False):
 
     int_conv_func = int_conv_funcs[display_base]
     n = int_conv_func(n_t)
-    
+
     if type(b_t) == int:
         b = int_conv_func(b_t)
     else:
@@ -290,8 +348,9 @@ def radix_base(t, display_base = 16, raw_hex = False):
 #    print(exp_tuple(float("-inf"), 10))
 
 if __name__ == "__main__":
-    x = float(input("Number pls: "))
-    print(hex_manip(x, 8))
+    f = float(input("Number pls: "))
+    d = float(input("Number pls: "))
+    print(hex_manip(f, d, True))
 
 if __name__ == "__main_":
     a = float(input("Number pls: "))
@@ -324,6 +383,3 @@ if __name__ == "__main_":
     print("Within {:.0e} of each other?: {}".format(tolerance, x_comp < tolerance))
 
 
-#    print("\n\n")
-#    print(si_prefix.si_prefixes)
-#    print(si_prefix.bi_prefixes)
