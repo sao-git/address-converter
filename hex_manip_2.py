@@ -77,7 +77,7 @@ print("Percent difference = {:%}\n" .format(f_new / f - 1))
 # If `display_base` is 2, nothing further is needed.
 if d == 2:
     final = sign_f + whole_new + '.' + fraction_new
-    print((final, n_conv, conv(d)))
+    print((final, n_conv, '10', d))
     sys.exit(0)
 
 if int(fraction_new) == 0:
@@ -107,4 +107,4 @@ fraction_final = ''.join(conv(int(g,2)) for g in frac_groups)
 # Finally, assemble the whole signed mantissa...
 final = sign_f + conv(int(whole_new,2)) + '.' + fraction_final
 # ...and return the mantissa, exponent (with denominator, even if denom is 1), and display base
-print((final, n_conv, conv(d)))
+print((final, n_conv, '10', d))
