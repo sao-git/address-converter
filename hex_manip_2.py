@@ -30,24 +30,9 @@ print("p = " + str(p))
 bits = exp_notation.radix_bit_conv[d]
 n = int(p / bits)
 print("n = " + str(n))
-#t_old = (abs(p) % bits) / bits
-#print("t_old = " + str(t_old))
 s = abs(p) % bits
 print("s = " + str(s))
 
-#s_old = int(1/d**-t_old)
-#print("s_old = " + str(s_old))
-#s = 2**t
-#print("s = " + str(s))
-
-#s_bits = exp_notation.radix_bit_conv[s]
-#print("s_bits = " + str(s_bits))
-
-#test = s_bits == t
-#print("s_bits == t = " + str(test))
-
-
-#f_frac = tuple(int(x) / 16**i for i,x in enumerate(iter(f_m), 1))
 
 # Determine builtin function for conversion
 int_conv_func = exp_notation.int_conv_funcs[d]
@@ -56,11 +41,8 @@ f_frac = tuple(int(x, 16) for x in iter(fraction))
 f_frac_d = sum(x / 16**i for i,x in enumerate(f_frac, 1))
 print("f_frac_d = " + str(f_frac_d))
 # Convert digits to new base
-#fraction = "".join(int_conv_func(x)[2:] for x in f_frac)
-#fraction = tuple(int_conv_func(x)[2:] for x in f_frac)
 fraction = "".join(bin(x)[2:].zfill(4) for x in f_frac)
 print("fraction in big endian = " + str(fraction))
-#frac_d = sum(int(x, display_base) / display_base**i for i,x in enumerate(fraction, 1))
 frac_d = sum(int(x, 2) / 2**i for i,x in enumerate(fraction, 1))
 print("frac_d = " + str(frac_d))
 print("f_frac_d == frac_d?: " + str(f_frac_d == frac_d))
