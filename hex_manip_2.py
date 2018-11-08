@@ -64,20 +64,27 @@ print(f)
 print(f_new)
 print()
 
+# Pad `fraction` with trailing zeroes if the length of `fraction` is not divisible by `bits`
 frac_length = len(fraction_new) % bits
 if frac_length != 0:
     fraction_new += ''.zfill(bits - frac_length)
 
 # Helpers for frac_groups
+#
+# The expression inside the zip creates a tuple of length `bits` where each element is a reference
+# to `frac_iter`, with the star operator allowing zip to use `frac_iter` to create the groups
 frac_iter = iter(fraction_new)
-frac_group_zip = zip(*((frac_iter,)*bits))
-# Get the groups of `fraction_new` of `bits` length
+frac_group_zip = zip(*( (frac_iter,)*bits ))
+# Get the groups of `fraction_new` of `bits` length as big endian binary strings
 frac_groups = tuple(''.join(t) for t in frac_group_zip)
 print(frac_groups)
-# Strip any trailing zero
+# Strip any trailing zero group
 if int(frac_groups[-1]) == 0:
     frac_groups = frac_groups[:-1]
 
+# Final converstion for `fraction`, giving a string of characters in the display base
 fraction_final = ''.join(int_conv_func(int(g,2)) for g in frac_groups)
+# Finally, assemble the whole signed mantissa...
 final = sign_f + int_conv_func(int(whole_new,2)) + '.' + fraction_final
+# ...and return the mantissa, exponent (with denominator, even if denom is 1), and display base
 print((final, n_conv, str(d)))
