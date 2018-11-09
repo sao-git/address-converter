@@ -227,12 +227,15 @@ def exp_tuple(x, base = 10, normalize = False):
 
 def hex_manip(f, display_base = 16, normalize = True):
     """
-    Converts a float `f` to a tuple of strings `m, (n, d), display_base`, where:
+    Converts a float `f` to a tuple (m, (n, d), base, display_base), where:
 
         `m` is the mantissa, normalized or not, in digits of `display_base`
         `n` is the numerator of the exponent on `display_base` that converts `m` back to `f`
-        `d` is the denominator of the exponent, including 1
-        `display_base` is in `valid_radices`
+        `d` is the denominator of the exponent, including '1'
+        `base` is '10', the representation of any radix in its own digits
+        `display_base` is a radix in `valid_radices`
+
+        `m`, `n`, `d`, and `base` are all strings. `display_base` is an integer.
 
     If `normalize` == True and `display_base` != 2, there is a chance the exponent will not be an
     integer. In this case, the denominator `d` is equal to the base 2 logarithm of `display_base`.
@@ -256,62 +259,72 @@ def hex_manip(f, display_base = 16, normalize = True):
     # `fraction` is in hex; each digit will be converted to int if display_base != 16
     whole, fraction = mantissa.split('.')
 
-    bits = radix_bit_conv[display_base]
-    n = int(p / bits)
-    s = abs(p) % bits
+    bits = radix_bits[display_base]
 
-    # Determine builtin function for conversion
-    int_conv_func = lambda x: int_conv_funcs[display_base](x)[2:]
+    # Determine builtin function for final conversion
+    conv = radix_conv(display_base)
 
-    # Helper generator for readability
+    # Helper generator for readibility. Convert each hex digit in `fraction` to a sequence of integers…
     f_frac = (int(x, 16) for x in iter(fraction))
-    # Convert hex digits in the fraction to a big endian binary string
-    fraction = "".join(bin(x)[2:].zfill(4) for x in f_frac)
+    # …and combine the sequence into an MSB-first bitstring, four bits per, removing trailing zeroes
+    fraction = re.sub('0*$', '', ''.join(bin(x)[2:].zfill(4) for x in f_frac))
 
-    if n < 0:
-        if normalize == True:
-            working_set = whole + fraction
-            whole_new, fraction_new = working_set[:s+1], working_set[s+1:]
-            n = (p+bits-1)/bits
-            n_conv = '-' + int_conv_func(abs(int(n*bits - s+1))), str(bits)
-        else:
+    normalize = True
+
+    if normalize == True:
+        working_set = whole + fraction
+        s = working_set.find('1')
+        whole_new, fraction_new = working_set[s:s+bits], working_set[s+bits:]
+        n_new = p - s - bits + 1
+        n_new, denom = (n_new // bits, 1) if n_new % bits == 0 else (n_new, bits)
+
+        n_conv = '-' + conv(abs(n_new)), str(denom)
+        n = n_new/denom
+    else:
+        s = abs(p) % bits
+        n = int(p / bits)
+        n_conv = conv(abs(n)), '1'
+        if n < 0:
             working_set = whole.zfill(s+1) + fraction
             whole_new, fraction_new = working_set[0], working_set[1:]
-            n_conv = n, '1'
-    else:
-        working_set = whole + fraction
-        whole_new, fraction_new = working_set[:s+1], working_set[s+1:]
-        n_conv = n, '1'
+        else:
+            working_set = whole + fraction
+            whole_new, fraction_new = working_set[:s+1], working_set[s+1:]
 
-    print(fraction_new)
+
+    # Showing that sign + whole_new + fraction_new is equal (within float rounding error) to input `f`
+    #f_frac_gen = (int(x)/2**i for i,x in enumerate(fraction_new,1))
+    #f_new = sign(f) * (int(whole_new, 2) + sum(f_frac_gen)) * display_base**n
+
+    # If `display_base` is 2, nothing further is needed.
+    if display_base == 2:
+        final = sign_f + whole_new + '.' + fraction_new
+        return final, n_conv, '10', display_base
 
     if int(fraction_new) == 0:
-        # A '0' in a 1-tuple is sufficient if there is no new fractional part
+        # A '0' in a 1-tuple is sufficient when there is zero fractional part
         frac_groups = '0',
     else:
         # Pad `fraction` with trailing zeroes if the length of `fraction` is not divisible by `bits`
         frac_length = len(fraction_new) % bits
         if frac_length != 0:
             fraction_new += ''.zfill(bits - frac_length)
-
         # Helpers for frac_groups
         #
-        # The expression inside `zip` creates a tuple of length `bits` where each element is a reference
-        # to `frac_iter`, with the star operator allowing `zip` to use `frac_iter` to create the groups
+        # The expression inside the zip creates a tuple of length `bits` where each element is a reference
+        # to `frac_iter`, with the star operator allowing zip to use `frac_iter` to create the groups
         frac_iter = iter(fraction_new)
         frac_group_zip = zip(*( (frac_iter,)*bits ))
         # Get the groups of `fraction_new` of `bits` length as big endian binary strings
-        frac_groups = [''.join(t) for t in frac_group_zip]
-        # Strip trailing zero groups
-        while int(frac_groups[-1]) == 0:
-            frac_groups.pop()
+        frac_groups = (''.join(t) for t in frac_group_zip)
+
 
     # Final converstion for `fraction`, giving a string of characters in the display base
-    fraction_final = ''.join(int_conv_func(int(g,2)) for g in frac_groups)
+    fraction_final = ''.join(conv(int(g,2)) for g in frac_groups)
     # Finally, assemble the whole signed mantissa…
-    final = sign_f + int_conv_func(int(whole_new,2)) + '.' + fraction_final
-    # …and return the mantissa, exponent (with denominator), and display base
-    return final, n_conv, str(display_base)
+    final = sign_f + conv(int(whole_new,2)) + '.' + fraction_final
+    # …and return the mantissa, exponent (with denominator, even if denom is 1), and display base
+    return final, n_conv, '10', display_base
 
 
 def radix_base(t, display_base = 16, raw_hex = False):
@@ -349,7 +362,7 @@ def radix_base(t, display_base = 16, raw_hex = False):
 
 if __name__ == "__main__":
     f = float(input("Number pls: "))
-    d = float(input("Number pls: "))
+    d = int(input("Display base pls: "))
     print(hex_manip(f, d, True))
 
 if __name__ == "__main_":
