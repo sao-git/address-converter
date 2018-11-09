@@ -259,17 +259,16 @@ def hex_manip(f, display_base = 16, normalize = True):
     # `fraction` is in hex; each digit will be converted to int if display_base != 16
     whole, fraction = mantissa.split('.')
 
+    # Base 2 logarithm of `display_base`, equivalent to the number of bits a radix
+    # can display in a single digit.
     bits = radix_bits[display_base]
-
     # Determine builtin function for final conversion
     conv = radix_conv(display_base)
 
-    # Helper generator for readibility. Convert each hex digit in `fraction` to a sequence of integers…
+    # Convert each hex digit in `fraction` to a sequence of integers…
     f_frac = (int(x, 16) for x in iter(fraction))
     # …and combine the sequence into an MSB-first bitstring, four bits per, removing trailing zeroes
     fraction = re.sub('0*$', '', ''.join(bin(x)[2:].zfill(4) for x in f_frac))
-
-    normalize = True
 
     if normalize == True:
         working_set = whole + fraction
@@ -279,22 +278,34 @@ def hex_manip(f, display_base = 16, normalize = True):
         n_new, denom = (n_new // bits, 1) if n_new % bits == 0 else (n_new, bits)
 
         n_conv = '-' + conv(abs(n_new)), str(denom)
-        n = n_new/denom
+        #n = n_new/denom
     else:
-        s = abs(p) % bits
+        # `n` will be the integer part of the original exponent divided by `bits`
+        # This new exponent will be for `display_base`, as `display_base**(p/bits)`
+        # is equal to `2**p`.
         n = int(p / bits)
+        # `s` will be the remainder of `p/bits`, the derivation of which is explained
+        # at [] and serves as the amount to shift left (for positive `n`) or right
+        # (for negative `n`). This corrects for the fractional part of `p/bits`.
+        s = abs(p) % bits
         n_conv = conv(abs(n)), '1'
         if n < 0:
+            # Perform a string version of unsigned bitwise right shift
             working_set = whole.zfill(s+1) + fraction
             whole_new, fraction_new = working_set[0], working_set[1:]
         else:
+            # Perform a string version of unsigned bitwise left shift
             working_set = whole + fraction
             whole_new, fraction_new = working_set[:s+1], working_set[s+1:]
 
 
-    # Showing that sign + whole_new + fraction_new is equal (within float rounding error) to input `f`
+    ## Showing that sign + whole_new + fraction_new is equal (within float rounding error) to input `f`
     #f_frac_gen = (int(x)/2**i for i,x in enumerate(fraction_new,1))
     #f_new = sign(f) * (int(whole_new, 2) + sum(f_frac_gen)) * display_base**n
+    #print("\nf = " + str(f))
+    #print("f_new = " + str(f_new))
+    #print("Percent difference = {:%}\n" .format(f_new / f - 1))
+
 
     # If `display_base` is 2, nothing further is needed.
     if display_base == 2:
