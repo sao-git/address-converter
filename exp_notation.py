@@ -283,7 +283,7 @@ def hex_manip(f, display_base = 16, normalize = True):
         # `n` will be the integer part of the original exponent divided by `bits`
         # This new exponent will be for `display_base`, as `display_base**(p/bits)`
         # is equal to `2**p`.
-        n = int(p / bits)
+        n = p // bits
         # `s` will be the remainder of `p/bits`, the derivation of which is explained
         # at [] and serves as the amount to shift left (for positive `n`) or right
         # (for negative `n`). This corrects for the fractional part of `p/bits`.
